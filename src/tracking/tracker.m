@@ -115,7 +115,7 @@ function [bboxes, speed] = tracker(varargin)
 
     z_out_id = net_z.getOutputs();
     %%
-    if ~isempty(p.gpus) && p.init_gpu == true
+    if ~isempty(p.gpus)
         im = gpuArray(im);
     end
     % if grayscale repeat one channel to match filters size

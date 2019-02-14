@@ -3,7 +3,7 @@ function [pyramid, pad_masks_x] = make_scale_pyramid(im, targetPosition, in_side
     in_side_scaled = round(in_side_scaled);
     pyramid = zeros(out_side, out_side, 3, n, 'single');
     pad_masks_x = false(out_side, out_side, 1, n, 'logical');
-    if ~isempty(p.gpus) && p.init_gpu == true
+    if ~isempty(p.gpus)
         pyramid = gpuArray(pyramid);
     end
     max_target_side = in_side_scaled(end);
