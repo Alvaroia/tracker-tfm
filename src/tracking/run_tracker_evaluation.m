@@ -19,7 +19,7 @@ function [curve_dist, curve_overlap, expected_dist, expected_overlap, all_boxes,
     else
         tracker_params.paths = env_paths_tracking();
     end
-
+    
     th_points_d = linspace(0,50,run_params.n_th_points);
     th_points_o = linspace(0,1,run_params.n_th_points);
     applyToGivenRow = @(func, matrix1, matrix2) @(row) func(matrix1(row, :), matrix2(row, :));
@@ -51,8 +51,8 @@ function [curve_dist, curve_overlap, expected_dist, expected_overlap, all_boxes,
             [all_boxes, all_gt, all_type, times] = do_OTB_TRE(video, all_boxes, all_gt, all_type, times, run_params.subSeq, tracker_params, run_params);
     end
 
-    distances = applyToRows(dist_fun, all_boxes, all_gt);
-    ious = applyToRows(IOU_fun, all_boxes, all_gt);
+    distances = applyToRows(dist_fun, all_boxes, all_gt);   %TODO DISTANCIA EUCLIDEA CONTRA EL GT POR VIDEO
+    ious = applyToRows(IOU_fun, all_boxes, all_gt); %TODO IOU ACUMULADO POR VIDEO
     [curve_dist, expected_dist] = compute_score(distances, th_points_d);
     [curve_overlap, expected_overlap] = compute_score(ious, th_points_o);
     mean_t = mean(times);
@@ -102,7 +102,7 @@ function [all_boxes, all_gt, all_type, times] = do_OTB_TRE(video, all_boxes, all
         else
             type = TRE*ones(n_subframes ,1);
         end
-        all_boxes = cat(1, all_boxes, new_boxes);
+        all_boxes = cat(1, all_boxes, new_boxes);   %TODO bounding box stacked
         this_gt =  ground_truth(tpar.startFrame:end, :);
         if rpar.log
             % log new_boxes and this_gt to file
@@ -112,7 +112,7 @@ function [all_boxes, all_gt, all_type, times] = do_OTB_TRE(video, all_boxes, all
            % Padding with NaNs used to maintain all groundtruth in same matrix
            this_gt = padarray(this_gt,[0 4],NaN,'post');
         end
-        all_gt = cat(1, all_gt, this_gt);
+        all_gt = cat(1, all_gt, this_gt);   %TODO this_gt ground truth this video
         all_type = cat(1, all_type, type);
     end
 end

@@ -4,9 +4,7 @@ function [newTargetPosition, bestScale] = tracker_step(net_x, s_x, s_z, scoreId,
     net_x.eval([z_out, {'instance', x_crops}]);
     responseMaps = reshape(net_x.vars(scoreId).value, [p.scoreSize p.scoreSize p.numScale]);
     % init upsampled response map
-    %responseMapsUP = gpuArray(single(zeros(p.scoreSize*p.responseUp, p.scoreSize*p.responseUp, p.numScale)));
-    responseMapsUP = (single(zeros(p.scoreSize*p.responseUp, p.scoreSize*p.responseUp, p.numScale)));
-
+    responseMapsUP = gpuArray(single(zeros(p.scoreSize*p.responseUp, p.scoreSize*p.responseUp, p.numScale)));
     % get the response map
     currentScaleID = ceil(p.numScale/2);
     % pick the response with the highest peak ratio

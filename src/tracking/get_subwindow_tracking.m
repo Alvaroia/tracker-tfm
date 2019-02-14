@@ -51,7 +51,7 @@ function [im_patch, im_patch_original] = get_subwindow_tracking(im, pos, model_s
         if size(im_patch,1)~=model_sz(1)
             im_patch = imresize(gather(im_patch_original), model_sz);
             if ~isempty(gpus)
-                %im_patch = gpuArray(im_patch);
+                im_patch = gpuArray(im_patch);
             end
         end
     else

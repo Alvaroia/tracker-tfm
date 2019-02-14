@@ -110,13 +110,13 @@ function [bboxes, speed] = tracker(varargin)
     for i=1:numel(p.trim_z_branch)
         remove_layers_from_prefix(net_x, p.trim_z_branch{i});
     end
-    % display_net(net_x, {'instance', [255 255 3 8], 'br1_out', [30 30 32 8]}, 'x_net')
-    % display_net(net_x, {'instance', [255 255 3 8], 'join_tmpl_cropped', [17 17 32 8]}, 'x_net')
+%     display_net(net_x, {'instance', [255 255 3 8], 'br1_out', [30 30 32 8]}, 'x_net')
+%     display_net(net_x, {'instance', [255 255 3 8], 'join_tmpl_cropped', [17 17 32 8]}, 'x_net')
 
     z_out_id = net_z.getOutputs();
     %%
-    if ~isempty(p.gpus)
-        %im = gpuArray(im);
+    if ~isempty(p.gpus) && p.init_gpu == true
+        im = gpuArray(im);
     end
     % if grayscale repeat one channel to match filters size
     if(size(im, 3)==1)
@@ -176,7 +176,7 @@ function [bboxes, speed] = tracker(varargin)
         if i>p.startFrame
             im = single(p.imgFiles{i});
             if ~isempty(p.gpus)
-                %im = gpuArray(im);
+                im = gpuArray(im);
             end
    			% if grayscale repeat one channel to match filters size
     		if(size(im, 3)==1), im = repmat(im, [1 1 3]); end
@@ -233,6 +233,8 @@ function [bboxes, speed] = tracker(varargin)
             else
                 im = gather(im)/255;
                 im = insertShape(im, 'Rectangle', rectPosition, 'LineWidth', 4, 'Color', 'yellow');
+%                im = insertShape(im, 'Rectangle', gtPosition, 'LineWidth', 3, 'Color', 'green');
+                %TODO insert here groundthruth in green
                 % Display the annotated video frame using the video player object.
                 step(videoPlayer, im);
             end
