@@ -233,7 +233,18 @@ function [bboxes, speed] = tracker(varargin)
             else
                 im = gather(im)/255;
                 im = insertShape(im, 'Rectangle', rectPosition, 'LineWidth', 4, 'Color', 'yellow');
-%                im = insertShape(im, 'Rectangle', gtPosition, 'LineWidth', 3, 'Color', 'green');
+                if numel(p.ground_truth(i,:)) == 8
+                    %%TODO
+%                     im = insertShape(im, 'Rectangle',...
+%                         [p.ground_truth(i,1),...
+%                         p.ground_truth(i,2),...
+%                         p.ground_truth(i,6)-p.ground_truth(i,1),...
+%                         p.ground_truth(i,7)-p.ground_truth(i,2)],...
+%                         'LineWidth', 2, 'Color', 'green');
+
+                else
+                    im = insertShape(im, 'Rectangle', p.ground_truth(i,:), 'LineWidth', 2, 'Color', 'green');
+                end
                 %TODO insert here groundthruth in green
                 % Display the annotated video frame using the video player object.
                 step(videoPlayer, im);

@@ -1,4 +1,4 @@
-function [curve_dist, curve_overlap, expected_dist, expected_overlap, all_boxes, all_gt, mean_t, std_t] = run_tracker_evaluation(video, tracker_params, varargin)
+function [curve_dist, curve_overlap, expected_dist, expected_overlap, all_boxes, all_gt, mean_t, std_t, distPerVideo, overlapPerVideo] = run_tracker_evaluation(video, tracker_params, varargin)
 %RUN_TRACKER_EVALUATION
     % Performs an evaluation similar to the OTB-TRE by initializing the tracker at different starting point in the sequence.
     % Evaluation can be done on a single video or on all videos in the
@@ -30,29 +30,60 @@ function [curve_dist, curve_overlap, expected_dist, expected_overlap, all_boxes,
     all_gt = [];
     all_type = [];
     times = [];
-    switch video
-        case 'all'
-            % all videos, call self with each video name.
-            % only keep valid directory names
-            dirs = dir(fullfile(tracker_params.paths.eval_set_base, run_params.dataset));
-            videos = {dirs.name};
-            videos(strcmp('.', videos) | strcmp('..', videos) | ...
-                strcmp('anno', videos) | ~[dirs.isdir]) = [];
-            nv = numel(videos);
-            fprintf('\n||| OTB-TRE evaluation for %d sequences and %d sub-seq each |||\n\n', numel(videos), run_params.subSeq);
-            for k = 1:nv
-                fprintf('%d/%d - %s\n', k, nv, videos{k});
-                if k>1, tracker_params.init_gpu = false; end
-                [all_boxes, all_gt, all_type, times] = do_OTB_TRE(videos{k}, all_boxes, all_gt, all_type, times, run_params.subSeq, tracker_params, run_params);
-            end
+    distPerVideo = [];
+    overlapPerVideo = [];
+    if isa(video,'cell')==true
+        for k = 1:length(video)
+            fprintf('%d - %s\n', k, video{k});
+            if k>1, tracker_params.init_gpu = false; end
+            [videoBoxes, videoGT, all_type, times] = do_OTB_TRE(video{k}, [], [], all_type, times, run_params.subSeq, tracker_params, run_params);
+            
+            all_boxes = cat(1,all_boxes,videoBoxes);
+            all_gt = cat(1,all_gt,videoGT);
+%             all_type = cat(1,all_type,videoType);
+%             times = cat(1,times,videoTimes);
 
-        otherwise
-            % run only once
-            [all_boxes, all_gt, all_type, times] = do_OTB_TRE(video, all_boxes, all_gt, all_type, times, run_params.subSeq, tracker_params, run_params);
+
+            
+            [videoDistance, videoIOU] = distancePerVideo(dist_fun, IOU_fun, videoBoxes, videoGT);
+            [videoCurveDist, videoExpectedDist] = compute_score(videoDistance, th_points_d);
+            [videoCurveOverlap, videoExpectedOverlap] = compute_score(videoIOU, th_points_o);
+            distPerVideo = cat(1,distPerVideo,videoExpectedDist);
+            overlapPerVideo = cat(1,overlapPerVideo,videoExpectedOverlap);
+        end
+    else
+        switch video
+            case 'all'
+                % all videos, call self with each video name.
+                % only keep valid directory names
+                dirs = dir(fullfile(tracker_params.paths.eval_set_base, run_params.dataset));
+                videos = {dirs.name};
+                videos(strcmp('.', videos) | strcmp('..', videos) | ...
+                    strcmp('anno', videos) | ~[dirs.isdir]) = [];
+                nv = numel(videos);
+                fprintf('\n||| OTB-TRE evaluation for %d sequences and %d sub-seq each |||\n\n', numel(videos), run_params.subSeq);
+                for k = 1:nv
+                    fprintf('%d/%d - %s\n', k, nv, videos{k});
+                    if k>1, tracker_params.init_gpu = false; end
+%                     [all_boxes, all_gt, all_type, times] = do_OTB_TRE(videos{k}, all_boxes, all_gt, all_type, times, run_params.subSeq, tracker_params, run_params);
+                    [videoBoxes, videoGT, all_type, times] = do_OTB_TRE(videos{k}, [], [], all_type, times, run_params.subSeq, tracker_params, run_params);
+                    
+                    all_boxes = cat(1,all_boxes,videoBoxes);
+                    all_gt = cat(1,all_gt,videoGT);
+                    [videoDistance, videoIOU] = distancePerVideo(dist_fun, IOU_fun, videoBoxes, videoGT);
+                    [videoCurveDist, videoExpectedDist] = compute_score(videoDistance, th_points_d);
+                    [videoCurveOverlap, videoExpectedOverlap] = compute_score(videoIOU, th_points_o);
+                    distPerVideo = cat(1,distPerVideo,videoExpectedDist);
+                    overlapPerVideo = cat(1,overlapPerVideo,videoExpectedOverlap);
+                end
+                
+            otherwise
+                % run only once
+                [all_boxes, all_gt, all_type, times] = do_OTB_TRE(video, all_boxes, all_gt, all_type, times, run_params.subSeq, tracker_params, run_params);
+        end
     end
-
-    distances = applyToRows(dist_fun, all_boxes, all_gt);   %TODO DISTANCIA EUCLIDEA CONTRA EL GT POR VIDEO
-    ious = applyToRows(IOU_fun, all_boxes, all_gt); %TODO IOU ACUMULADO POR VIDEO
+    distances = applyToRows(dist_fun, all_boxes, all_gt);   %TODO DISTANCIA EUCLIDEA CONTRA EL GT POR FRAME
+    ious = applyToRows(IOU_fun, all_boxes, all_gt); %TODO IOU ACUMULADO POR FRAME
     [curve_dist, expected_dist] = compute_score(distances, th_points_d);
     [curve_overlap, expected_overlap] = compute_score(ious, th_points_o);
     mean_t = mean(times);
@@ -92,6 +123,7 @@ function [all_boxes, all_gt, all_type, times] = do_OTB_TRE(video, all_boxes, all
         tpar.targetSize = [h w];
         %run the tracker
         if i>1, tpar.init_gpu = false; end
+        tpar.ground_truth = ground_truth;
         [new_boxes, new_speed] = tracker(tpar);
         times(end+1) = new_speed;
         A = new_boxes(1:tpar.startFrame-1, :);
