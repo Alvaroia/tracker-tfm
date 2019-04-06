@@ -23,7 +23,7 @@ function [bboxes, speed] = tracker(varargin)
     p.targetSize = [];
     p.track_lost = [];
     p.ground_truth = [];
-
+    p.debug = false;
     %% params from the network architecture params (TODO: should be inferred from the saved network)
     % they have to be consistent with the training
     p.scoreSize = 33;
@@ -40,7 +40,7 @@ function [bboxes, speed] = tracker(varargin)
     % Get environment-specific default paths.
     p.paths = struct();
     p.paths = env_paths_tracking(p.paths);
-    p = vl_argparse(p, varargin);
+    p = vl_argparse(p, varargin);       %?????????
     
     % network surgeries depend on the architecture    
     switch p.join.method
@@ -146,8 +146,11 @@ function [bboxes, speed] = tracker(varargin)
     end
 
     net_z.eval({'exemplar', z_crop});
+    if p.debug == true
+    figure(1);subplot(2,2,1);imshow(uint8(z_crop(:,:,:,1)));xlabel("template cropped");    %Template crop
+    end
     get_vars = @(net, ids) cellfun(@(id) net.getVar(id).value, ids, 'UniformOutput', false);
-    z_out_val = get_vars(net_z, z_out_id);
+    z_out_val = get_vars(net_z, z_out_id);  %Salida de la rama template (XxY x32 kernels)
     
     min_s_x = p.minSFactor*s_x;
     max_s_x = p.maxSFactor*s_x;
@@ -173,6 +176,8 @@ function [bboxes, speed] = tracker(varargin)
     scoreId = net_x.getVarIndex(p.id_score);
     overall_tic = tic;
     for i = p.startFrame:nImgs
+        p.numFrame = i;
+
         if i>p.startFrame
             im = single(p.imgFiles{i});
             if ~isempty(p.gpus)
@@ -206,8 +211,7 @@ function [bboxes, speed] = tracker(varargin)
                 % template update with rolling average                                                
                 update = @(curr, next) (1-p.zLR) * curr + p.zLR * next;
                 z_out_val = arrayfun(@(i) update(z_out_val{i}, z_out_val_new{i}), ...
-                             1:numel(z_out_id), 'UniformOutput', false);
-                                                                  
+                             1:numel(z_out_id), 'UniformOutput', false);                                       
                 s_z = max(min_s_z, min(max_s_z, (1-p.scaleLR)*s_z + p.scaleLR*scaledExemplar(newScale)));
             end
 
@@ -217,7 +221,16 @@ function [bboxes, speed] = tracker(varargin)
         else
             % at the first frame output position and size passed as input (ground truth)
         end
-
+        
+        %%%%%%%%%%%
+        %To process always the ground truth region
+%         disp 'Forcing ground truth';
+%         region = p.ground_truth(i,:);
+%         [cx, cy, w, h] = get_axis_aligned_BB(region);
+%         p.targetPosition = [cy cx]; % centre of the bounding box
+%         p.targetSize = [h w];
+        %%%%%%%%%%%
+        
         rectPosition = [p.targetPosition([2,1]) - p.targetSize([2,1])/2, p.targetSize([2,1])];
         %% output bbox in the original frame coordinates
         oTargetPosition = p.targetPosition;
@@ -227,32 +240,25 @@ function [bboxes, speed] = tracker(varargin)
         if p.visualization
             if isempty(videoPlayer)
                 figure(1), imshow(im/255);
-                figure(1), rectangle('Position', rectPosition, 'LineWidth', 4, 'EdgeColor', 'y');
+                figure(1), rectangle('Position', rectPosition, 'LineWidth', 4, 'EdgeColor', 'r');
                 drawnow
                 fprintf('Frame %d\n', p.startFrame+i);
             else
                 im = gather(im)/255;
-                im = insertShape(im, 'Rectangle', rectPosition, 'LineWidth', 4, 'Color', 'yellow');
+                im = insertShape(im, 'Rectangle', rectPosition, 'LineWidth', 2, 'Color', 'red');
                 if numel(p.ground_truth(i,:)) == 8
-                    %%TODO
-%                     im = insertShape(im, 'Rectangle',...
-%                         [p.ground_truth(i,1),...
-%                         p.ground_truth(i,2),...
-%                         p.ground_truth(i,6)-p.ground_truth(i,1),...
-%                         p.ground_truth(i,7)-p.ground_truth(i,2)],...
-%                         'LineWidth', 2, 'Color', 'green');
-
+                    im = insertShape(im, 'Polygon', p.ground_truth(i,:), 'LineWidth', 1, 'Color', 'green');
                 else
-                    im = insertShape(im, 'Rectangle', p.ground_truth(i,:), 'LineWidth', 2, 'Color', 'green');
+                    im = insertShape(im, 'Rectangle', p.ground_truth(i,:), 'LineWidth', 1, 'Color', 'green');
                 end
-                %TODO insert here groundthruth in green
                 % Display the annotated video frame using the video player object.
                 step(videoPlayer, im);
             end
+%             figure(2),imagesc(reshape(z_out_val{1},[17,17*32])),colorbar,pause(0.1)
         end
 
         %stop the tracker on track loss (if a 'track_lost' function is specified)
-        if ~isempty(p.track_lost) && p.track_lost(i, bboxes(i,:)),
+        if ~isempty(p.track_lost) && p.track_lost(i, bboxes(i,:))
             break
         end
     end

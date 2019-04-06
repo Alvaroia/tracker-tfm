@@ -7,11 +7,11 @@ function [curve_dist, curve_overlap, expected_dist, expected_overlap, all_boxes,
     global OPE TRE;
     OPE = 1; TRE = 2;
 
-    run_params.subSeq = 3; % number of restarts (20 for official OTB-TRE)
+    run_params.subSeq = 1; %3% number of restarts (20 for official OTB-TRE)
     run_params.n_th_points = 100+1; % 50 for official OTB-TRE
     run_params.log = false;
     run_params.log_prefix = '';
-    run_params.stop_on_failure = true; % stop the evaluation after failure and set to zero overlap all remaining frames
+    run_params.stop_on_failure = false; % stop the evaluation after failure and set to zero overlap all remaining frames
     run_params.dataset = 'validation';
     run_params = vl_argparse(run_params, varargin);
     if isfield(tracker_params, 'paths')
@@ -83,7 +83,7 @@ function [curve_dist, curve_overlap, expected_dist, expected_overlap, all_boxes,
         end
     end
     distances = applyToRows(dist_fun, all_boxes, all_gt);   %TODO DISTANCIA EUCLIDEA CONTRA EL GT POR FRAME
-    ious = applyToRows(IOU_fun, all_boxes, all_gt); %TODO IOU ACUMULADO POR FRAME
+    ious = applyToRows(IOU_fun, all_boxes, all_gt);         %TODO IOU ACUMULADO POR FRAME
     [curve_dist, expected_dist] = compute_score(distances, th_points_d);
     [curve_overlap, expected_overlap] = compute_score(ious, th_points_o);
     mean_t = mean(times);
@@ -134,7 +134,7 @@ function [all_boxes, all_gt, all_type, times] = do_OTB_TRE(video, all_boxes, all
         else
             type = TRE*ones(n_subframes ,1);
         end
-        all_boxes = cat(1, all_boxes, new_boxes);   %TODO bounding box stacked
+        all_boxes = cat(1, all_boxes, new_boxes);   %TODO bounding box stacked per frame
         this_gt =  ground_truth(tpar.startFrame:end, :);
         if rpar.log
             % log new_boxes and this_gt to file

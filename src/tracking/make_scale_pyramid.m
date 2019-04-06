@@ -1,4 +1,6 @@
 function [pyramid, pad_masks_x] = make_scale_pyramid(im, targetPosition, in_side_scaled, out_side, avgChans, stats, p)
+    %im y search region se representan en formato uint8:
+    %figure(1);imshow(uint8(im));figure(2);imshow(uint8(search_region));
     n = numel(in_side_scaled);
     in_side_scaled = round(in_side_scaled);
     pyramid = zeros(out_side, out_side, 3, n, 'single');

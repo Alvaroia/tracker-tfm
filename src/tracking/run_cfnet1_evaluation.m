@@ -8,5 +8,8 @@ tracker_par.scalePenalty = 0.9825;
 tracker_par.scaleLR = 0.7;
 tracker_par.wInfluence = 0.2375;
 tracker_par.zLR = 0.0058;
+tracker_par.visualization = false;
 
-[~,~,dist,overlap,~,~,~,~] = run_tracker_evaluation('all', tracker_par);
+[~,~,dist,overlap,~,~,~,~,distPerVideo,iouPerVideo] = run_tracker_evaluation('vot2016_iceskater1', tracker_par);
+%dist: 41.51	overlap: 44.74	fps: 24.3 stop_on_failure=false
+%result for each video saved in resultsCFNetConv1.mat

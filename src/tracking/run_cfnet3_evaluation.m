@@ -9,4 +9,6 @@ tracker_par.scaleLR = 0.66;
 tracker_par.wInfluence = 0.27;
 tracker_par.zLR = 0.008;
 
-[~,~,dist,overlap,~,~,~,~] = run_tracker_evaluation('all', tracker_par);
+[~,~,dist,overlap,~,~,~,~,distPerVideo, iouPerVideo] = run_tracker_evaluation('all', tracker_par);
+resultsCFNetConv3 = [distPerVideo iouPerVideo];
+% dist: 45.00	overlap: 42.17	fps: 30.9 (stop_on_failure=false)
